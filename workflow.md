@@ -10,3 +10,13 @@ north-star?
 - [ros gpt](https://github.com/aniskoubaa/rosgpt)
 - [llm robot](https://github.com/ksDreamer/LLM-Robot)
 - [Auromix ros-llm](https://github.com/Auromix/ROS-LLM)
+
+
+
+- setup ollama [ollama](https://ollama.com/download)
+- Ollama is running on localhost:11434
+- ollama pull deepseek-r1:1.5b
+- ollama run deepseek-r1:1.5b
+
+
+setup vm: https://getutm.app/
