@@ -15,7 +15,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rosgpt import ROSGPT
 
-import tools.turtle as turtle_tools
+from turtle_agent.tools.turtle import TurtleNode as turtle_tools
 from help import get_help
 from llm import get_llm
 from prompts import get_prompts
@@ -67,6 +67,7 @@ class TurtleAgent(ROSGPT):
             "Teleport to (3, 3) and draw a small hexagon.",
             "Give me a list of nodes, topics, services, params, and log files.",
             "Change the background color to light blue and the pen color to red.",
+            "I want you to move 1 meter speed 0.8"
         ]
 
         self.command_handler = {
