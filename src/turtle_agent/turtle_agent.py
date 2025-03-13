@@ -290,6 +290,7 @@ class TurtleAgent(ROSGPT):
 
 
 def main(args=None):
+    print('finally yayyyy')
     dotenv.load_dotenv(dotenv.find_dotenv())
     streaming = False
     turtle_agent = TurtleAgent(verbose=False, streaming=streaming)
