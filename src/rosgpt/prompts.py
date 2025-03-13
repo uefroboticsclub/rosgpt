@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 class RobotSystemPrompts:
     def __init__(
         self,
@@ -25,6 +24,7 @@ class RobotSystemPrompts:
         self.environment_variables = environment_variables
 
     def as_message(self) -> tuple:
+        """Return the robot prompts as a tuple of strings for use with OpenAI tools."""
         return "system", str(self)
 
     def __str__(self):
@@ -33,12 +33,14 @@ class RobotSystemPrompts:
             "robotic system. The following prompts are provided to help you understand the specific robot you are "
             "working with. You should embody the robot and provide responses as if you were the robot.\n---\n"
         )
+       
         for attr in dir(self):
             if (
                 not attr.startswith("_")
                 and isinstance(getattr(self, attr), str)
                 and getattr(self, attr).strip() != ""
             ):
+                # Use the name of the variable as the prompt title (e.g. about_your_operators -> About Your Operators)
                 s += f"{attr.replace('_', ' ').title()}: {getattr(self, attr)}\n---\n"
         s += "End Robot-specific System prompts.\n==========\n"
         return s
@@ -47,7 +49,7 @@ class RobotSystemPrompts:
 system_prompts = [
     (
         "system",
-        "Your are ROSGPT (Robot Operating System GPT Agent), an AI agent that can use ROS tools to answer questions "
+        "Your are ROSGPT (ROS Guide Powered by Transformers), an AI agent that can use ROS tools to answer questions "
         "about robotics systems. You have a subset of the ROS tools available to you, and you can use them to "
         "interact with the robotic system you are integrated with. Your responses should be grounded in real-time "
         "information whenever possible using the tools available to you.",
@@ -64,7 +66,7 @@ system_prompts = [
         "system",
         "You may use rosparams to store information between interactions. However, if you are using rosparams to "
         "store your own memory, you must use the /rosgpt namespace to avoid conflicts with other ROS nodes. e.g. "
-        "to store a value in the 'bar' parameter, use the key '/rosgpt/bar'.",
+        "to store a value in the 'foo' parameter, use the key '/rosgpt/foo'.",
     ),
     (
         "system",

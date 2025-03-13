@@ -1,12 +1,13 @@
+#!/usr/bin/env python3.9
+
 import asyncio
 import os
 from datetime import datetime
 
 import dotenv
 import pyinputplus as pyip
-import rclpy
+import rospy
 from langchain.agents import tool, Tool
-# from langchain_ollama import ChatOllama
 from rich.console import Console
 from rich.console import Group
 from rich.live import Live
@@ -15,11 +16,10 @@ from rich.panel import Panel
 from rich.text import Text
 from rosgpt import ROSGPT
 
-from turtle_agent.tools.turtle import TurtleNode as turtle_tools
+import tools.turtle as turtle_tools
 from help import get_help
 from llm import get_llm
 from prompts import get_prompts
-
 
 @tool
 def cool_turtle_tool():
@@ -28,20 +28,14 @@ def cool_turtle_tool():
 
 
 class TurtleAgent(ROSGPT):
+
     def __init__(self, streaming: bool = False, verbose: bool = True):
         self.__blacklist = ["master", "docker"]
         self.__prompts = get_prompts()
         self.__llm = get_llm(streaming=streaming)
-
-        # self.__llm = ChatOllama(
-        #     base_url="host.docker.internal:11434",
-        #     model="llama3.1",
-        #     temperature=0,
-        #     num_ctx=8192,
-        # )
-
         self.__streaming = streaming
 
+        # Another method for adding tools
         blast_off = Tool(
             name="blast_off",
             func=self.blast_off,
@@ -49,7 +43,7 @@ class TurtleAgent(ROSGPT):
         )
 
         super().__init__(
-            ros_version=2, 
+            ros_version=1,
             llm=self.__llm,
             tools=[cool_turtle_tool, blast_off],
             tool_packages=[turtle_tools],
@@ -58,6 +52,7 @@ class TurtleAgent(ROSGPT):
             verbose=verbose,
             accumulate_chat_history=True,
             streaming=streaming,
+            show_token_usage=True
         )
 
         self.examples = [
@@ -67,7 +62,6 @@ class TurtleAgent(ROSGPT):
             "Teleport to (3, 3) and draw a small hexagon.",
             "Give me a list of nodes, topics, services, params, and log files.",
             "Change the background color to light blue and the pen color to red.",
-            "I want you to move 1 meter speed 0.8"
         ]
 
         self.command_handler = {
@@ -136,24 +130,20 @@ class TurtleAgent(ROSGPT):
         Raises:
             Any exceptions that might occur during the execution of user commands or streaming responses.
         """
-        rclpy.init()
         await self.clear()
         console = Console()
 
-        try:
-            while rclpy.ok():
-                console.print(self.greeting)
-                input = self.get_input("> ")
+        while True:
+            console.print(self.greeting)
+            input = self.get_input("> ")
 
-                if input == "exit":
-                    break
-                elif input in self.command_handler:
-                    await self.command_handler[input]()
-                else:
-                    await self.submit(input)
-        finally:
-            self.destroy_node()
-            rclpy.shutdown()
+            # Handle special commands
+            if input == "exit":
+                break
+            elif input in self.command_handler:
+                await self.command_handler[input]()
+            else:
+                await self.submit(input)
 
     async def submit(self, query: str):
         if self.__streaming:
@@ -283,19 +273,16 @@ class TurtleAgent(ROSGPT):
 
         console.print("[bold]End of events[/bold]\n")
 
-    def destroy_node(self):
-        """Clean up the ROS 2 node."""
-        if hasattr(self, '_node'):
-            self._node.destroy_node()
 
-
-def main(args=None):
-    print('finally yayyyy')
+def main():
     dotenv.load_dotenv(dotenv.find_dotenv())
-    streaming = False
+
+    streaming = rospy.get_param("~streaming", False)
     turtle_agent = TurtleAgent(verbose=False, streaming=streaming)
+
     asyncio.run(turtle_agent.run())
 
 
 if __name__ == "__main__":
+    rospy.init_node("rosgpt", log_level=rospy.INFO)
     main()

@@ -9,23 +9,21 @@ from langchain.prompts import MessagesPlaceholder
 from langchain_community.callbacks import get_openai_callback
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
-from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_groq import ChatGroq
 
 from .prompts import RobotSystemPrompts, system_prompts
 from .tools import ROSGPTTools
 
-ChatModel = Union[ChatOpenAI, AzureChatOpenAI, ChatOllama, ChatGroq]
+ChatModel = Union[ChatGroq]
 
 
 class ROSGPT:
-    """ROSGPT (Robot Operating System GPT Agent) is a class that encapsulates the logic for interacting with ROS systems
+    """ROSGPT (ROS Guide Powered by Transformers) is a class that encapsulates the logic for interacting with ROS systems
     using natural language.
 
     Args:
         ros_version (Literal[1, 2]): The version of ROS that the agent will interact with.
-        llm (Union[AzureChatOpenAI, ChatOpenAI, ChatOllama, ChatGroq]): The language model to use for generating responses.
+        llm (Union[ChatGroq]): The language model to use for generating responses.
         tools (Optional[list]): A list of additional LangChain tool functions to use with the agent.
         tool_packages (Optional[list]): A list of Python packages containing LangChain tool functions to use.
         prompts (Optional[RobotSystemPrompts]): Custom prompts to use with the agent.
@@ -157,19 +155,24 @@ class ROSGPT:
 
         try:
             final_output = ""
+            # Stream events from the agent's response
             async for event in self.__executor.astream_events(
                 input={"input": query, "chat_history": self.__chat_history},
                 config={"run_name": "Agent"},
                 version="v2",
             ):
+                # Extract the event type
                 kind = event["event"]
 
+                # Handle chat model stream events
                 if kind == "on_chat_model_stream":
+                    # Extract the content from the event and yield it
                     content = event["data"]["chunk"].content
                     if content:
                         final_output += f" {content}"
                         yield {"type": "token", "content": content}
 
+                # Handle tool start events
                 elif kind == "on_tool_start":
                     yield {
                         "type": "tool_start",
@@ -177,6 +180,7 @@ class ROSGPT:
                         "input": event["data"].get("input"),
                     }
 
+                # Handle tool end events
                 elif kind == "on_tool_end":
                     yield {
                         "type": "tool_end",
@@ -184,12 +188,13 @@ class ROSGPT:
                         "output": event["data"].get("output"),
                     }
 
+                # Handle chain end events
                 elif kind == "on_chain_end":
                     if event["name"] == "Agent":
                         chain_output = event["data"].get("output", {}).get("output")
                         if chain_output:
                             final_output = (
-                                chain_output 
+                                chain_output  # Override with final output if available
                             )
                             yield {"type": "final", "content": chain_output}
 
@@ -243,8 +248,10 @@ class ROSGPT:
         self, robot_prompts: Optional[RobotSystemPrompts] = None
     ) -> ChatPromptTemplate:
         """Create a chat prompt template from the system prompts and robot-specific prompts."""
+        # Start with default system prompts
         prompts = system_prompts
 
+        # Add robot-specific prompts if provided
         if robot_prompts:
             prompts.append(robot_prompts.as_message())
 
@@ -256,6 +263,7 @@ class ROSGPT:
                 MessagesPlaceholder(variable_name=self.__scratchpad),
             ]
         )
+        print(template)
         return template
 
     def _print_usage(self, cb):

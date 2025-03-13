@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
@@ -8,14 +8,12 @@ fi
 
 # Set default headless mode
 HEADLESS=${HEADLESS:-false}
-# DEVELOPMENT is no longer used, but kept for consistency
-DEVELOPMENT=${DEVELOPMENT:-false}
 
 # Enable X11 forwarding based on OS
 case "$(uname)" in
     Linux*)
         echo "Enabling X11 forwarding..."
-        export DISPLAY=:0  # Use the host's local display for Linux
+        export DISPLAY=:0 
         xhost +local:docker
         ;;
     Darwin*)
