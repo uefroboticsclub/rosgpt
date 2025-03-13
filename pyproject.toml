@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rosgpt"
+version = "0.0.1"
+description = "ROSGPT: the ROS Guide Powered by Transformers"
+readme = "README.md"
+authors = [{ name = "Glory Olusola", email = "olusolagloryolamide@gmail.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research/Education",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["Robotics", "ROS", "Machine Learning", "Data Engineering", "Data Infrastructure", "LLM"]
+requires-python = ">=3.9, <4"
+dependencies = [
+    "PyYAML==6.0.1",
+    "python-dotenv>=1.0.1",
+    "langchain==0.3.2",
+    "langchain-community==0.3.1",
+    "langchain-core==0.3.9",
+    "langchain-groq>=0.1.0",
+    "pydantic",
+    "pyinputplus",
+    "cffi",
+    "rich",
+    "regex",
+    "pillow>=10.4.0",
+    "numpy>=1.26.4",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/uefroboticsclub/rosgpt"
+"Bug Tracker" = "https://github.com/uefroboticsclub/rosgpt/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

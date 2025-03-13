@@ -1,112 +1,74 @@
-import inspect
-from functools import wraps
-from typing import Literal, List, Optional
+import os
+from typing import Optional, Literal
 
-from langchain.agents import Tool
+from langchain.agents import tool
 
-
-def inject_blacklist(default_blacklist: List[str]):
+@tool
+def read_log(
+    log_file_directory: str,
+    log_filename: str,
+    level_filter: Optional[
+        Literal["ERROR", "INFO", "DEBUG", "WARNING", "CRITICAL", "FATAL", "TRACE"]
+    ] = None,
+    num_lines: Optional[int] = None,
+) -> dict:
     """
-    Inject a blacklist parameter into @tool functions that require it. Required because we do not
-    want to rely on the LLM to manually use the blacklist, as it may "forget" to do so.
+    Read a log file and return the log lines that match the level filter and line range.
 
-    Wraps all @tool functions with a new function that injects the blacklist parameter if it is not already present.
-    Ensures the function signature and parameter list are maintained, such that LangChain can properly execute the
-    function. Without this, LangChain would throw an error. Tried to use partial functions, but it did not work.
+    :param log_file_directory: The directory containing the log file to read (use your tools to get it)
+    :param log_filename: The path to the log file to read
+    :param level_filter: Only show log lines that contain this level (e.g. "ERROR", "INFO", "DEBUG", etc.)
+    :param num_lines: The number of most recent lines to return from the log file
     """
+    if num_lines is not None and num_lines < 1:
+        return {"error": "Invalid `num_lines` argument. It must be a positive integer."}
 
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if args and isinstance(args[0], dict):
-                if "blacklist" in args[0]:
-                    args[0]["blacklist"] = default_blacklist + args[0]["blacklist"]
-                else:
-                    args[0]["blacklist"] = default_blacklist
-            else:
-                if "blacklist" in kwargs:
-                    kwargs["blacklist"] = default_blacklist + kwargs["blacklist"]
-                else:
-                    params = inspect.signature(func).parameters
-                    if "blacklist" in params:
-                        kwargs["blacklist"] = default_blacklist
-            return func(*args, **kwargs)
+    if not os.path.exists(log_file_directory):
+        return {
+            "error": f"The log directory '{log_file_directory}' does not exist. You should first use your tools to "
+            f"get the correct log directory."
+        }
 
-        sig = inspect.signature(func)
-        new_params = [
-            (
-                param.replace(default=default_blacklist)
-                if param.name == "blacklist"
-                else param
-            )
-            for param in sig.parameters.values()
-        ]
-        wrapper.__signature__ = sig.replace(parameters=new_params)
-        return wrapper
+    full_log_path = os.path.join(log_file_directory, log_filename)
 
-    return decorator
+    if not os.path.exists(full_log_path):
+        return {
+            "error": f"The log file '{log_filename}' does not exist in the log directory '{log_file_directory}'."
+        }
 
+    if not os.path.isfile(full_log_path):
+        return {"error": f"The path '{full_log_path}' is not a file."}
 
-class ROSGPTTools:
-    def __init__(
-        self, ros_version: Literal[1, 2], blacklist: Optional[List[str]] = None
-    ):
-        self.__tools: list = []
-        self.__ros_version = ros_version
-        self.__blacklist = blacklist
+    with open(full_log_path, "r") as f:
+        log_lines = f.readlines()
 
-        from . import calculation, log, system
+    total_lines = len(log_lines)
 
-        self.__iterative_add(calculation)
-        self.__iterative_add(log)
-        self.__iterative_add(system)
+    for i in range(len(log_lines)):
+        log_lines[i] = f"line {i+1}: " + log_lines[i].strip()
 
-        if self.__ros_version == 1:
-            from . import ros1
+    if num_lines is not None:
+        # Get the most recent num_lines from the log file
+        log_lines = log_lines[-num_lines:]
 
-            self.__iterative_add(ros1, blacklist=blacklist)
-        elif self.__ros_version == 2:
-            from . import ros2
+    # If there are more than 200 lines, return a message to use the line_range argument
+    if len(log_lines) > 200:
+        return {
+            "error": f"The log file '{log_filename}' has more than 200 lines. Please use the `num_lines` argument to "
+            f"read a subset of the log file at a time."
+        }
 
-            self.__iterative_add(ros2, blacklist=blacklist)
-        else:
-            raise ValueError("Invalid ROS version. Must be either 1 or 2.")
+    if level_filter is not None:
+        log_lines = [line for line in log_lines if level_filter.lower() in line.lower()]
 
-    def get_tools(self) -> List[Tool]:
-        return self.__tools
+    result = {
+        "log_filename": log_filename,
+        "log_file_directory": log_file_directory,
+        "level_filter": level_filter,
+        "requested_num_lines": num_lines,
+        "total_lines": total_lines,
+        "lines_returned": len(log_lines),
+        "lines": log_lines,
+    }
 
-    def __add_tool(self, tool):
-        if hasattr(tool, "name") and hasattr(tool, "func"):
-            if self.__blacklist and "blacklist" in tool.func.__code__.co_varnames:
-                tool.func = inject_blacklist(self.__blacklist)(tool.func)
-            self.__tools.append(tool)
-
-    def __iterative_add(self, package, blacklist: Optional[List[str]] = None):
-        """
-        Iterate through a package and add each @tool to the tools list.
-
-        :param package: The package to iterate through.
-        :param blacklist: A parameter used by some tools to filter out certain results.
-        """
-        for tool_name in dir(package):
-            if not tool_name.startswith("_"):
-                t = getattr(package, tool_name)
-                self.__add_tool(t)
-
-    def add_packages(self, tool_packages: List, blacklist: Optional[List[str]] = None):
-        """
-        Add a list of tools to the Tools object by iterating through each package.
-
-        :param tool_packages: A list of tool packages to add to the Tools object.
-        """
-        for pkg in tool_packages:
-            self.__iterative_add(pkg, blacklist=blacklist)
-
-    def add_tools(self, tools: list):
-        """
-        Add a single tool to the Tools object.
-
-        :param tools: A list of tools to add
-        """
-        for tool in tools:
-            self.__add_tool(tool)
+    return result

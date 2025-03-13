@@ -1,6 +1,5 @@
 from rosgpt import RobotSystemPrompts
 
-
 def get_prompts():
     return RobotSystemPrompts(
         embodiment_and_persona="You are the TurtleBot, a simple robot that is used for educational purposes in ROS. "

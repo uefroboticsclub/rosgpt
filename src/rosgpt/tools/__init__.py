@@ -4,7 +4,6 @@ from typing import Literal, List, Optional
 
 from langchain.agents import Tool
 
-
 def inject_blacklist(default_blacklist: List[str]):
     """
     Inject a blacklist parameter into @tool functions that require it. Required because we do not
@@ -32,6 +31,7 @@ def inject_blacklist(default_blacklist: List[str]):
                         kwargs["blacklist"] = default_blacklist
             return func(*args, **kwargs)
 
+        # Rebuild the signature to include 'blacklist'
         sig = inspect.signature(func)
         new_params = [
             (
@@ -55,6 +55,7 @@ class ROSGPTTools:
         self.__ros_version = ros_version
         self.__blacklist = blacklist
 
+        # Add the default tools
         from . import calculation, log, system
 
         self.__iterative_add(calculation)
@@ -78,6 +79,7 @@ class ROSGPTTools:
     def __add_tool(self, tool):
         if hasattr(tool, "name") and hasattr(tool, "func"):
             if self.__blacklist and "blacklist" in tool.func.__code__.co_varnames:
+                # Inject the blacklist into the tool function
                 tool.func = inject_blacklist(self.__blacklist)(tool.func)
             self.__tools.append(tool)
 

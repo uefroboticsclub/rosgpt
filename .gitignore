@@ -1,6 +1,7 @@
+.idea
+.vscode
+build/
+dist/
+__pycache__/
+docs
 .DS_Store
-__pycache__
-/venv
-/build
-/install
-/log

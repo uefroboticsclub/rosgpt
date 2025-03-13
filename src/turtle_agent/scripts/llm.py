@@ -3,7 +3,6 @@ import os
 import dotenv
 from langchain_groq import ChatGroq
 
-
 def get_llm(streaming: bool = False):
     """A helper function to get the LLM instance using Grok from xAI."""
     dotenv.load_dotenv(dotenv.find_dotenv())
@@ -19,7 +18,6 @@ def get_llm(streaming: bool = False):
     )
 
     return llm
-
 
 def get_env_variable(var_name: str) -> str:
     """

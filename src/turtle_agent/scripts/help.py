@@ -1,6 +1,5 @@
 from typing import List
 
-
 def get_help(examples: List[str]) -> str:
     """Generate a help message for the agent."""
     return f"""
@@ -21,7 +20,7 @@ def get_help(examples: List[str]) -> str:
 
         <template>
             ```shell
-            ROSGPT - Robot Operating System GPT Agent
+            ROSGPT - ROS Guide Powered by Transformers
             Embodiment: TurtleSim bot
 
             ========================================
