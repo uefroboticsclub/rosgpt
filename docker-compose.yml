@@ -1,0 +1,30 @@
+version: "2.4"
+services:
+  rosgpt_pincherx:
+    container_name: ros_sandbox
+    build:
+      context: .
+      dockerfile: Dockerfile.pincherx
+      args:
+        UNAME: user
+        UID: 1000
+        GID: 1000
+    image: ros_sandbox
+    privileged: true
+    stdin_open: true
+    tty: true
+    network_mode: host
+    environment:
+      - ROS_DOMAIN_ID=1
+      - QT_X11_NO_MITSHM=1
+      - DISPLAY=$DISPLAY
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev:/dev
+      - ./src:/app/src
+      - ./xsarm_python:/home/user/xsarm_python
+    command: bash
