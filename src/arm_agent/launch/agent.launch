@@ -1,0 +1,14 @@
+<launch>
+    <arg name="streaming" default="false" />
+    
+    <!-- Start the ROSGPT arm agent -->
+    <node name="rosgpt_arm_agent"
+          pkg="arm_agent"
+          type="arm_agent.py"
+          respawn="false"
+          respawn_delay="10"
+          cwd="node"
+          output="screen" >
+        <param name="streaming" value="$(arg streaming)" />
+    </node>
+</launch>

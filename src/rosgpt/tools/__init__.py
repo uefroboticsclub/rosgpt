@@ -56,9 +56,8 @@ class ROSGPTTools:
         self.__blacklist = blacklist
 
         # Add the default tools
-        from . import calculation, log, system
+        from . import log, system
 
-        self.__iterative_add(calculation)
         self.__iterative_add(log)
         self.__iterative_add(system)
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.9
 
 import asyncio
 import os
@@ -7,6 +7,7 @@ from datetime import datetime
 import dotenv
 import pyinputplus as pyip
 import rospy
+from langchain.agents import tool, Tool
 from rich.console import Console
 from rich.console import Group
 from rich.live import Live
@@ -15,53 +16,91 @@ from rich.panel import Panel
 from rich.text import Text
 from rosgpt import ROSGPT
 
-import tools.pincherx as pincherx_tools
+import tools.arm as arm_tools
 from help import get_help
 from llm import get_llm
 from prompts import get_prompts
 
+@tool
+def system_status():
+    """Get the current system status of the robot arm."""
+    return "PincherX-100 Robot Arm Agent is operational in simulation mode."
 
-class PincherXAgent(ROSGPT):
-
+class ArmAgent(ROSGPT):
+    
     def __init__(self, streaming: bool = False, verbose: bool = True):
         self.__blacklist = ["master", "docker"]
         self.__prompts = get_prompts()
         self.__llm = get_llm(streaming=streaming)
         self.__streaming = streaming
 
+        # Initialize ROS publishers
+        arm_tools.init_publishers()
+        
+        # Start a timer to publish simulated joint states
+        self.joint_state_timer = rospy.Timer(rospy.Duration(0.1), self.publish_joint_states)
+
+        # Another method for adding tools
+        calibrate_arm = Tool(
+            name="calibrate_arm",
+            func=self.calibrate_arm,
+            description="Calibrate the robot arm by moving through its range of motion.",
+        )
+
         super().__init__(
-            ros_version=2,  # PincherX uses ROS2
+            ros_version=1,
             llm=self.__llm,
-            tool_packages=[pincherx_tools],
+            tools=[system_status, calibrate_arm],
+            tool_packages=[arm_tools],
             blacklist=self.__blacklist,
             prompts=self.__prompts,
             verbose=verbose,
             accumulate_chat_history=True,
             streaming=streaming,
-            show_token_usage=True,
+            show_token_usage=True
         )
 
         self.examples = [
-            "Move to the home position",
-            "Open the gripper wide",
-            "Pick up the object at position x=0.15, y=0, z=0.02 and place it at x=0.15, y=0.1, z=0.02",
-            "What is the current end-effector pose?",
-            "Move the arm in a square pattern 10cm above the table",
-            "Wave hello by moving the end-effector left and right 3 times",
+            "Move the arm to home position",
+            "Open and close the gripper",
+            "Execute a wave motion",
+            "Record my movements for 10 seconds",
+            "Move to position x=0.2, y=0.1, z=0.3",
+            "Show me the joint limits",
+            "Perform a pick and place demonstration",
+            "Emergency stop!",
         ]
 
         self.command_handler = {
             "help": lambda: self.submit(get_help(self.examples)),
             "examples": lambda: self.submit(self.choose_example()),
             "clear": lambda: self.clear(),
-            "home": lambda: self.submit("Move to home position"),
-            "sleep": lambda: self.submit("Move to sleep position"),
         }
+        
+        rospy.loginfo("ARM AGENT: Initialized in simulation mode")
+
+    def publish_joint_states(self, event):
+        """Periodically publish simulated joint states"""
+        arm_tools.simulate_joint_states()
+
+    def calibrate_arm(self, input: str):
+        return f"""
+        Starting arm calibration sequence in simulation mode...
+        
+        <ROSGPT_INSTRUCTIONS>
+            You should now use your tools to:
+            1. Move to home position
+            2. Test each joint by moving through its range
+            3. Test the gripper open/close
+            4. Return to home position
+            5. Report calibration complete
+        </ROSGPT_INSTRUCTIONS>
+        """
 
     @property
     def greeting(self):
         greeting = Text(
-            "\nHi! I'm the ROSGPT-PincherX-100 agent 🦾. How can I help you today?\n"
+            "\nHi! I'm the ROSGPT-PincherX-100 agent 🦾🤖. How can I help you control the arm today?\n"
         )
         greeting.stylize("frame bold blue")
         greeting.append(
@@ -94,7 +133,20 @@ class PincherXAgent(ROSGPT):
 
     async def run(self):
         """
-        Run the PincherXAgent's main interaction loop.
+        Run the ArmAgent's main interaction loop.
+        
+        This method initializes the console interface and enters a continuous loop to handle user input.
+        It processes various commands including 'help', 'examples', 'clear', and 'exit', as well as
+        custom user queries. The method uses asynchronous operations to stream responses and maintain
+        a responsive interface.
+        
+        The loop continues until the user inputs 'exit'.
+        
+        Returns:
+            None
+            
+        Raises:
+            Any exceptions that might occur during the execution of user commands or streaming responses.
         """
         await self.clear()
         console = Console()
@@ -120,6 +172,12 @@ class PincherXAgent(ROSGPT):
     def print_response(self, query: str):
         """
         Submit the query to the agent and print the response to the console.
+        
+        Args:
+            query (str): The input query to process.
+            
+        Returns:
+            None
         """
         response = self.invoke(query)
         console = Console()
@@ -136,6 +194,18 @@ class PincherXAgent(ROSGPT):
     async def stream_response(self, query: str):
         """
         Stream the agent's response with rich formatting.
+        
+        This method processes the agent's response in real-time, updating the console
+        with formatted output for tokens and keeping track of events.
+        
+        Args:
+            query (str): The input query to process.
+            
+        Returns:
+            None
+            
+        Raises:
+            Any exceptions raised during the streaming process.
         """
         console = Console()
         content = ""
@@ -217,20 +287,19 @@ class PincherXAgent(ROSGPT):
                         border_style="red",
                     )
                 )
+                
             console.print()
 
         console.print("[bold]End of events[/bold]\n")
-
 
 def main():
     dotenv.load_dotenv(dotenv.find_dotenv())
 
     streaming = rospy.get_param("~streaming", False)
-    pincherx_agent = PincherXAgent(verbose=False, streaming=streaming)
+    arm_agent = ArmAgent(verbose=False, streaming=streaming)
 
-    asyncio.run(pincherx_agent.run())
-
+    asyncio.run(arm_agent.run())
 
 if __name__ == "__main__":
-    rospy.init_node("pincherx_agent", log_level=rospy.INFO)
+    rospy.init_node("rosgpt_arm", log_level=rospy.INFO)
     main()

@@ -1,9 +1,0 @@
-<launch>
-  <arg name="streaming" default="false" />
-  <node pkg="pincherx_agent" 
-        type="pincherx_agent.py" 
-        name="pincherx_agent" 
-        output="screen">
-    <param name="streaming" value="$(arg streaming)" />
-  </node>
-</launch>
