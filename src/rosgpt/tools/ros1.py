@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Optional, List
+from typing import Any, Optional, List
 
 import regex
 import rosgraph
@@ -455,7 +455,7 @@ def rosservice_info(services: List[str]) -> dict:
 
 
 @tool
-def rosservice_call(service: str, args: Optional[List[any]] = None) -> dict:
+def rosservice_call(service: str, args: Optional[List[Any]] = None) -> dict:
     """Calls a specific ROS service with the provided arguments.
 
     :param service: The name of the ROS service to call.

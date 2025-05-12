@@ -1,7 +1,9 @@
-#!/usr/bin/env python3.9
+#!/usr/bin/env python3
 
+import sys
 import asyncio
 import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime
 
 import dotenv
@@ -20,6 +22,7 @@ import tools.arm as arm_tools
 from help import get_help
 from llm import get_llm
 from prompts import get_prompts
+
 
 @tool
 def system_status():

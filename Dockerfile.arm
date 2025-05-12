@@ -1,157 +1,682 @@
 # FROM arm64v8/ros:noetic
+# ENV DEBIAN_FRONTEND=noninteractive
+# ENV HEADLESS=false
+
+# # Install required packages (including git, crucial for cloning)
+# RUN apt-get update && apt-get install -y \
+#     ros-$(rosversion -d)-turtlesim \
+#     locales \
+#     xvfb \
+#     python3.9 \
+#     python3.9-distutils \
+#     python3.9-dev \
+#     curl \
+#     wget \
+#     git \
+#     udev \
+#     nano \
+#     net-tools \
+#     usbutils \
+#     build-essential \
+#     cmake \
+#     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# # Install pip for Python 3.8
+# RUN wget https://bootstrap.pypa.io/pip/3.8/get-pip.py -O get-pip-3.8.py && \
+#     python3.8 get-pip-3.8.py && \
+#     rm get-pip-3.8.py
+
+# # Install pip for Python 3.9
+# RUN wget https://bootstrap.pypa.io/get-pip.py -O get-pip-3.9.py && \
+#     python3.9 get-pip-3.9.py && \
+#     rm get-pip-3.9.py
+
+# # Verify default pip3 version
+# RUN echo "Default pip3 version (should be 3.8's pip):" && pip3 --version
+
+# # Install netifaces for Python 3.8 explicitly
+# RUN python3.8 -m pip install netifaces && \
+#     echo "Verifying netifaces for python3.8 DURING BUILD:" && \
+#     python3.8 -c "import netifaces; print(f'BUILD: netifaces for py3.8 found at: {netifaces.__file__}')" || \
+#     (echo "BUILD ERROR: netifaces install or import for Python 3.8 FAILED" && exit 1)
+
+# # Verify netifaces in ROS Python environment
+# RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+#     python3 -c \"import netifaces; print(f'ROS environment: netifaces found at: {netifaces.__file__}')\"" || \
+#     (echo "BUILD ERROR: netifaces not found in ROS Python environment" && exit 1)
+
+# # Set Python 3.8 as the default python3 for ROS compatibility
+# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
+#     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 2 && \
+#     update-alternatives --set python3 /usr/bin/python3.8 && \
+#     update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1
+
+# RUN echo "Default python3 version after alternatives:" && python3 --version
+
+# ENV PATH="/root/.local/bin:${PATH}"
+# RUN python3.8 -m pip install -U python-dotenv catkin_tools
+
+# RUN apt-get update && apt-get install -y \
+#     ros-noetic-gazebo-ros \
+#     ros-noetic-gazebo-ros-control \
+#     ros-noetic-gazebo-ros-pkgs \
+#     ros-noetic-joint-state-publisher \
+#     ros-noetic-robot-state-publisher \
+#     ros-noetic-rviz \
+#     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# WORKDIR /root
+# RUN mkdir -p interbotix_ws/src
+# WORKDIR /root/interbotix_ws
+
+# RUN echo "BUILD: Current directory: $(pwd)" && \
+#     echo "BUILD: Cloning Interbotix repositories into src/ ..." && \
+#     git clone https://github.com/Interbotix/interbotix_ros_manipulators.git src/interbotix_ros_manipulators && \
+#     echo "BUILD: Listing contents of src/interbotix_ros_manipulators:" && \
+#     ls -Al src/interbotix_ros_manipulators/ && \
+#     echo "BUILD: Checking for src/interbotix_ros_manipulators/interbotix_xsarm_control:" && \
+#     ls -Al src/interbotix_ros_manipulators/interbotix_xsarm_control || echo "BUILD WARN: src/interbotix_ros_manipulators/interbotix_xsarm_control not found after clone!"
+
+# RUN git clone https://github.com/Interbotix/interbotix_ros_core.git src/interbotix_ros_core && \
+#     echo "BUILD: Listing contents of src/interbotix_ros_core:" && \
+#     ls -Al src/interbotix_ros_core/
+
+# RUN echo "BUILD: Listing all contents of src/ directory:" && \
+#     ls -Al src/
+
+# # Use /bin/bash -c for commands needing 'source'
+# RUN echo "BUILD: Running rosdep install..." && \
+#     apt-get update && \
+#     /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+#                   rosdep update && \
+#                   rosdep install --from-paths src --ignore-src -r -y --verbose" && \
+#     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# RUN echo "BUILD: Building interbotix_ws with catkin_make..." && \
+#     /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+#                   catkin_make -j1 -DCATKIN_ENABLE_TESTING=0 && \
+#                   echo 'BUILD: catkin_make finished. Checking for devel/setup.bash...' && \
+#                   if [ ! -f devel/setup.bash ]; then \
+#                       echo 'BUILD ERROR: Interbotix workspace build FAILED, devel/setup.bash not found.' >&2; \
+#                       exit 1; \
+#                   fi && \
+#                   echo 'BUILD: Interbotix workspace build SUCCEEDED. devel/setup.bash found.' && \
+#                   echo 'BUILD: Listing contents of devel/share/ to find interbotix_xsarm_control...' && \
+#                   ls -Al devel/share/interbotix_xsarm_control || echo 'BUILD WARN: devel/share/interbotix_xsarm_control not found after build.'"
+
+# # Debug interbotix_xsarm_control package
+# RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+#     source /root/interbotix_ws/devel/setup.bash && \
+#     rospack find interbotix_xsarm_control || echo 'BUILD WARN: interbotix_xsarm_control not found after build'"
+
+# RUN python3.8 -m pip install pyinputplus rich langchain && \
+#     echo "Verifying pyinputplus for python3.8 DURING BUILD:" && \
+#     python3.8 -c "import pyinputplus; print(f'BUILD: pyinputplus for py3.8 found at: {pyinputplus.__file__}')" || \
+#     (echo "BUILD ERROR: pyinputplus install or import for Python 3.8 FAILED" && exit 1)
+
+# RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
+#     echo "if [ -f /root/interbotix_ws/devel/setup.bash ]; then source /root/interbotix_ws/devel/setup.bash; fi" >> /root/.bashrc && \
+#     echo "alias start='cd /app && catkin build && source devel/setup.bash && roslaunch arm_agent agent.launch'" >> /root/.bashrc && \
+#     echo "export ROSLAUNCH_SSH_UNKNOWN=1" >> /root/.bashrc
+
+# COPY . /app/
+# WORKDIR /app/
+# RUN chmod +x /app/src/arm_agent/scripts/arm_agent.py
+
+# # Install all dependencies for Python 3.8 first
+# RUN python3.8 -m pip install --user PyYAML==6.0.1 \
+#     python-dotenv>=1.0.1 \
+#     langchain \
+#     langchain-community \
+#     langchain-core \
+#     langchain-groq \
+#     pydantic \
+#     pyinputplus \
+#     cffi \
+#     rich \
+#     regex \
+#     pillow>=10.4.0 \
+#     numpy
+
+# # Install the rosgpt package for Python 3.8 (not 3.9)
+# RUN python3.8 -m pip install --user -e .
+
+# # Startup script with PYTHONPATH included
+# RUN echo '#!/bin/bash\n\
+# source /opt/ros/noetic/setup.bash\n\
+# export PYTHONPATH="/app/src:$PYTHONPATH"\n\
+# echo "PYTHONPATH is set to: $PYTHONPATH"\n\
+# PYTHON38_NETIFACES_PATH=$(python3.8 -c "import netifaces; print(netifaces.__file__)" 2>/dev/null || echo "NOT_FOUND")\n\
+# echo "Python 3.8 can find netifaces at: $PYTHON38_NETIFACES_PATH"\n\
+# ROS_PYTHON_NETIFACES_PATH=$(python3 -c "import netifaces; print(netifaces.__file__)" 2>/dev/null || echo "NOT_FOUND")\n\
+# echo "ROS Python environment can find netifaces at: $ROS_PYTHON_NETIFACES_PATH"\n\
+# if [ -f /root/interbotix_ws/devel/setup.bash ]; then\n\
+#     source /root/interbotix_ws/devel/setup.bash\n\
+#     echo "Sourced /root/interbotix_ws/devel/setup.bash"\n\
+# else\n\
+#     echo "WARNING: /root/interbotix_ws/devel/setup.bash not found."\n\
+# fi\n\
+# roscore > /dev/null 2>&1 &\n\
+# sleep 5\n\
+# if rospack find interbotix_xsarm_control > /dev/null 2>&1; then\n\
+#     echo "Found interbotix_xsarm_control package. Launching Interbotix simulation..."\n\
+#     if [ "$HEADLESS" = "false" ]; then\n\
+#         roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=px100 use_fake:=true use_sim:=true &\n\
+#     else\n\
+#         xvfb-run -a -s \"-screen 0 1920x1080x24\" roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=px100 use_fake:=true use_sim:=true &\n\
+#     fi\n\
+# else\n\
+#     echo "WARNING: interbotix_xsarm_control package not found by rospack."\n\
+# fi\n\
+# sleep 8\n\
+# echo "Run '\''start'\'' to build and launch the ROSGPT-PincherX-100 demo."\n\
+# exec /bin/bash\n' > /start.sh && chmod +x /start.sh
+
+# CMD ["/start.sh"]
+
+
+
+# FROM arm64v8/ros:noetic
+# ENV DEBIAN_FRONTEND=noninteractive
+# ENV HEADLESS=false
+
+# # Install required packages
+# RUN apt-get update && apt-get install -y \
+#     python3-pip \
+#     python3.9 \
+#     python3.9-dev \
+#     python3.9-distutils \
+#     git \
+#     curl \
+#     wget \
+#     nano \
+#     xvfb \
+#     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# # Install pip for Python 3.8
+# RUN wget https://bootstrap.pypa.io/pip/3.8/get-pip.py -O get-pip-3.8.py && \
+#     python3.8 get-pip-3.8.py && \
+#     rm get-pip-3.8.py
+
+# # Install required ROS packages
+# RUN apt-get update && apt-get install -y \
+#     ros-noetic-gazebo-ros \
+#     ros-noetic-gazebo-ros-control \
+#     ros-noetic-gazebo-ros-pkgs \
+#     ros-noetic-controller-manager \
+#     ros-noetic-joint-state-controller \
+#     ros-noetic-position-controllers \
+#     ros-noetic-robot-state-publisher \
+#     ros-noetic-xacro \
+#     ros-noetic-urdf \
+#     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# # Install Python dependencies
+# RUN python3.8 -m pip install -U python-dotenv catkin_tools pyinputplus rich langchain
+
+# # Create a simple robot arm workspace
+# WORKDIR /root
+# RUN mkdir -p simple_arm_ws/src/simple_arm/urdf && \
+#     mkdir -p simple_arm_ws/src/simple_arm/launch && \
+#     mkdir -p simple_arm_ws/src/simple_arm/config
+
+# # Create a simple URDF file for the arm
+# RUN echo '<?xml version="1.0"?>\n\
+# <robot name="simple_arm">\n\
+#   <link name="world"/>\n\
+#   <link name="base_link">\n\
+#     <visual>\n\
+#       <geometry>\n\
+#         <box size="0.1 0.1 0.05"/>\n\
+#       </geometry>\n\
+#       <material name="blue">\n\
+#         <color rgba="0 0 1 1"/>\n\
+#       </material>\n\
+#     </visual>\n\
+#     <collision>\n\
+#       <geometry>\n\
+#         <box size="0.1 0.1 0.05"/>\n\
+#       </geometry>\n\
+#     </collision>\n\
+#     <inertial>\n\
+#       <mass value="1.0"/>\n\
+#       <inertia ixx="0.1" ixy="0.0" ixz="0.0" iyy="0.1" iyz="0.0" izz="0.1"/>\n\
+#     </inertial>\n\
+#   </link>\n\
+#   \n\
+#   <joint name="world_to_base" type="fixed">\n\
+#     <parent link="world"/>\n\
+#     <child link="base_link"/>\n\
+#     <origin xyz="0 0 0.5"/>\n\
+#   </joint>\n\
+#   \n\
+#   <link name="link1">\n\
+#     <visual>\n\
+#       <geometry>\n\
+#         <cylinder radius="0.05" length="0.3"/>\n\
+#       </geometry>\n\
+#       <origin xyz="0 0 0.15"/>\n\
+#       <material name="red">\n\
+#         <color rgba="1 0 0 1"/>\n\
+#       </material>\n\
+#     </visual>\n\
+#     <collision>\n\
+#       <geometry>\n\
+#         <cylinder radius="0.05" length="0.3"/>\n\
+#       </geometry>\n\
+#       <origin xyz="0 0 0.15"/>\n\
+#     </collision>\n\
+#     <inertial>\n\
+#       <mass value="0.5"/>\n\
+#       <origin xyz="0 0 0.15"/>\n\
+#       <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.005"/>\n\
+#     </inertial>\n\
+#   </link>\n\
+#   \n\
+#   <joint name="waist" type="revolute">\n\
+#     <parent link="base_link"/>\n\
+#     <child link="link1"/>\n\
+#     <origin xyz="0 0 0.025"/>\n\
+#     <axis xyz="0 0 1"/>\n\
+#     <limit lower="-3.14" upper="3.14" effort="10" velocity="1"/>\n\
+#   </joint>\n\
+#   \n\
+#   <link name="link2">\n\
+#     <visual>\n\
+#       <geometry>\n\
+#         <cylinder radius="0.04" length="0.25"/>\n\
+#       </geometry>\n\
+#       <origin xyz="0 0 0.125"/>\n\
+#       <material name="green">\n\
+#         <color rgba="0 1 0 1"/>\n\
+#       </material>\n\
+#     </visual>\n\
+#     <collision>\n\
+#       <geometry>\n\
+#         <cylinder radius="0.04" length="0.25"/>\n\
+#       </geometry>\n\
+#       <origin xyz="0 0 0.125"/>\n\
+#     </collision>\n\
+#     <inertial>\n\
+#       <mass value="0.3"/>\n\
+#       <origin xyz="0 0 0.125"/>\n\
+#       <inertia ixx="0.008" ixy="0.0" ixz="0.0" iyy="0.008" iyz="0.0" izz="0.003"/>\n\
+#     </inertial>\n\
+#   </link>\n\
+#   \n\
+#   <joint name="shoulder" type="revolute">\n\
+#     <parent link="link1"/>\n\
+#     <child link="link2"/>\n\
+#     <origin xyz="0 0 0.3"/>\n\
+#     <axis xyz="0 1 0"/>\n\
+#     <limit lower="-1.57" upper="1.57" effort="10" velocity="1"/>\n\
+#   </joint>\n\
+#   \n\
+#   <gazebo>\n\
+#     <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">\n\
+#       <robotNamespace>/simple_arm</robotNamespace>\n\
+#     </plugin>\n\
+#   </gazebo>\n\
+# </robot>' > /root/simple_arm_ws/src/simple_arm/urdf/simple_arm.urdf
+
+# # Create controller config
+# RUN echo 'simple_arm:\n\
+#   joint_state_controller:\n\
+#     type: joint_state_controller/JointStateController\n\
+#     publish_rate: 50\n\
+#   \n\
+#   waist_position_controller:\n\
+#     type: position_controllers/JointPositionController\n\
+#     joint: waist\n\
+#   \n\
+#   shoulder_position_controller:\n\
+#     type: position_controllers/JointPositionController\n\
+#     joint: shoulder' > /root/simple_arm_ws/src/simple_arm/config/controllers.yaml
+
+# # Create launch file
+# RUN echo '<?xml version="1.0"?>\n\
+# <launch>\n\
+#   <!-- Launch Gazebo -->\n\
+#   <include file="$(find gazebo_ros)/launch/empty_world.launch">\n\
+#     <arg name="gui" value="$(arg gui)" />\n\
+#     <arg name="headless" value="$(arg headless)" />\n\
+#   </include>\n\
+#   \n\
+#   <!-- Load robot description -->\n\
+#   <param name="robot_description" textfile="$(find simple_arm)/urdf/simple_arm.urdf" />\n\
+#   \n\
+#   <!-- Spawn robot -->\n\
+#   <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model"\n\
+#         args="-param robot_description -urdf -model simple_arm -z 0.0" />\n\
+#   \n\
+#   <!-- Load controllers -->\n\
+#   <rosparam file="$(find simple_arm)/config/controllers.yaml" command="load"/>\n\
+#   \n\
+#   <!-- Start controllers -->\n\
+#   <node name="controller_spawner" pkg="controller_manager" type="spawner"\n\
+#         args="simple_arm/joint_state_controller\n\
+#               simple_arm/waist_position_controller\n\
+#               simple_arm/shoulder_position_controller" />\n\
+#   \n\
+#   <!-- Robot state publisher -->\n\
+#   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>\n\
+# </launch>' > /root/simple_arm_ws/src/simple_arm/launch/simple_arm_gazebo.launch
+
+# # Create package.xml
+# RUN echo '<?xml version="1.0"?>\n\
+# <package format="2">\n\
+#   <name>simple_arm</name>\n\
+#   <version>0.0.1</version>\n\
+#   <description>Simple robot arm for ROSGPT demo</description>\n\
+#   <maintainer email="your_email@example.com">Your Name</maintainer>\n\
+#   <license>MIT</license>\n\
+#   \n\
+#   <buildtool_depend>catkin</buildtool_depend>\n\
+#   <exec_depend>gazebo_ros</exec_depend>\n\
+#   <exec_depend>controller_manager</exec_depend>\n\
+#   <exec_depend>joint_state_controller</exec_depend>\n\
+#   <exec_depend>position_controllers</exec_depend>\n\
+#   <exec_depend>robot_state_publisher</exec_depend>\n\
+# </package>' > /root/simple_arm_ws/src/simple_arm/package.xml
+
+# # Create CMakeLists.txt
+# RUN echo 'cmake_minimum_required(VERSION 3.0.2)\n\
+# project(simple_arm)\n\
+# \n\
+# find_package(catkin REQUIRED)\n\
+# \n\
+# catkin_package()\n\
+# \n\
+# install(DIRECTORY launch urdf config\n\
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}\n\
+# )' > /root/simple_arm_ws/src/simple_arm/CMakeLists.txt
+
+# # Build the workspace
+# WORKDIR /root/simple_arm_ws
+# RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+#                   catkin_make && \
+#                   source devel/setup.bash"
+
+# # Copy application files
+# COPY . /app/
+# WORKDIR /app/
+# RUN chmod +x /app/src/arm_agent/scripts/arm_agent.py || true
+
+# # Install Python dependencies
+# RUN python3.8 -m pip install --user PyYAML==6.0.1 \
+#     python-dotenv>=1.0.1 \
+#     langchain \
+#     langchain-community \
+#     langchain-core \
+#     langchain-groq \
+#     pydantic \
+#     pyinputplus \
+#     cffi \
+#     rich \
+#     regex \
+#     pillow>=10.4.0 \
+#     numpy
+
+# # Install the rosgpt package
+# RUN python3.8 -m pip install --user -e .
+
+# # Update the arm tools to work with simple controllers
+# RUN echo 'import rospy\n\
+# from langchain.agents import tool\n\
+# from std_msgs.msg import Float64\n\
+# from sensor_msgs.msg import JointState\n\
+# from typing import Dict\n\
+# \n\
+# # Global variables\n\
+# current_joint_states = {}\n\
+# controller_publishers = {}\n\
+# \n\
+# def init_publishers():\n\
+#     global controller_publishers\n\
+#     controller_publishers["waist"] = rospy.Publisher("/simple_arm/waist_position_controller/command", Float64, queue_size=10)\n\
+#     controller_publishers["shoulder"] = rospy.Publisher("/simple_arm/shoulder_position_controller/command", Float64, queue_size=10)\n\
+#     rospy.loginfo("ARM AGENT: Publishers initialized for simple arm")\n\
+# \n\
+# @tool\n\
+# def get_joint_states() -> Dict[str, float]:\n\
+#     """Get the current joint states of the simple arm."""\n\
+#     try:\n\
+#         msg = rospy.wait_for_message("/joint_states", JointState, timeout=5)\n\
+#         joint_positions = {}\n\
+#         for i, name in enumerate(msg.name):\n\
+#             if i < len(msg.position):\n\
+#                 joint_positions[name] = msg.position[i]\n\
+#         global current_joint_states\n\
+#         current_joint_states = joint_positions\n\
+#         return joint_positions\n\
+#     except rospy.ROSException as e:\n\
+#         return {"error": f"Failed to get joint states: {e}"}\n\
+# \n\
+# @tool\n\
+# def move_joint(joint_name: str, position: float) -> str:\n\
+#     """Move a specific joint to a target position."""\n\
+#     global controller_publishers\n\
+#     if not controller_publishers:\n\
+#         init_publishers()\n\
+#     \n\
+#     if joint_name not in controller_publishers:\n\
+#         return f"Unknown joint: {joint_name}. Available joints: {list(controller_publishers.keys())}"\n\
+#     \n\
+#     msg = Float64()\n\
+#     msg.data = position\n\
+#     controller_publishers[joint_name].publish(msg)\n\
+#     rospy.sleep(1.0)\n\
+#     \n\
+#     return f"Moved {joint_name} to position {position}"\n\
+# \n\
+# @tool\n\
+# def move_to_home_position() -> str:\n\
+#     """Move the arm to home position (all joints at 0)."""\n\
+#     move_joint("waist", 0.0)\n\
+#     move_joint("shoulder", 0.0)\n\
+#     return "Arm moved to home position"\n\
+# ' > /app/src/arm_agent/scripts/tools/arm_simple.py
+
+# # Create startup script
+# RUN echo '#!/bin/bash\n\
+# # Source ROS environments\n\
+# source /opt/ros/noetic/setup.bash\n\
+# source /root/simple_arm_ws/devel/setup.bash\n\
+# export PYTHONPATH="/app/src:$PYTHONPATH"\n\
+# echo "PYTHONPATH is set to: $PYTHONPATH"\n\
+# \n\
+# # Start roscore\n\
+# roscore > /dev/null 2>&1 &\n\
+# ROSCORE_PID=$!\n\
+# sleep 5\n\
+# \n\
+# # Launch simulation\n\
+# echo "Launching Simple Arm simulation..."\n\
+# if [ "$HEADLESS" = "false" ]; then\n\
+#     roslaunch simple_arm simple_arm_gazebo.launch gui:=true headless:=false &\n\
+# else\n\
+#     xvfb-run -a -s "-screen 0 1920x1080x24" roslaunch simple_arm simple_arm_gazebo.launch gui:=false headless:=true &\n\
+# fi\n\
+# GAZEBO_PID=$!\n\
+# \n\
+# # Wait for simulation to start\n\
+# echo "Waiting for simulation to start..."\n\
+# sleep 15\n\
+# \n\
+# # Check available topics\n\
+# echo ""\n\
+# echo "Available ROS topics:"\n\
+# rostopic list | grep -E "(joint|control|gazebo)"\n\
+# \n\
+# echo ""\n\
+# echo "============================================="\n\
+# echo "Simple Arm simulation environment is ready!"\n\
+# echo "To launch the ROSGPT agent, run:"\n\
+# echo "cd /app && catkin build && source devel/setup.bash && roslaunch arm_agent agent.launch"\n\
+# echo "============================================="\n\
+# echo ""\n\
+# \n\
+# exec /bin/bash\n' > /start.sh && chmod +x /start.sh
+
+# CMD ["/start.sh"]
+
+
 FROM arm64v8/ros:noetic
 ENV DEBIAN_FRONTEND=noninteractive
 ENV HEADLESS=false
 
-# Install required packages (including git, crucial for cloning)
+# Install required packages
 RUN apt-get update && apt-get install -y \
-    ros-$(rosversion -d)-turtlesim \
-    locales \
-    xvfb \
-    python3.9 \
-    python3.9-distutils \
-    python3.9-dev \
+    python3-pip \
+    git \
     curl \
     wget \
-    git \
-    udev \
     nano \
-    net-tools \
-    usbutils \
+    xvfb \
     build-essential \
     cmake \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install pip for Python 3.8
-RUN wget https://bootstrap.pypa.io/pip/3.8/get-pip.py -O get-pip-3.8.py && \
-    python3.8 get-pip-3.8.py && \
-    rm get-pip-3.8.py
-
-# Install pip for Python 3.9
-RUN wget https://bootstrap.pypa.io/get-pip.py -O get-pip-3.9.py && \
-    python3.9 get-pip-3.9.py && \
-    rm get-pip-3.9.py
-
-# Verify default pip3 version
-RUN echo "Default pip3 version (should be 3.8's pip):" && pip3 --version
-
-# Install netifaces for Python 3.8 explicitly
-RUN python3.8 -m pip install netifaces && \
-    echo "Verifying netifaces for python3.8 DURING BUILD:" && \
-    python3.8 -c "import netifaces; print(f'BUILD: netifaces for py3.8 found at: {netifaces.__file__}')" || \
-    (echo "BUILD ERROR: netifaces install or import for Python 3.8 FAILED" && exit 1)
-
-# Verify netifaces in ROS Python environment
-RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
-    python3 -c \"import netifaces; print(f'ROS environment: netifaces found at: {netifaces.__file__}')\"" || \
-    (echo "BUILD ERROR: netifaces not found in ROS Python environment" && exit 1)
-
-# Set Python 3.8 as the default python3 for ROS compatibility
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 2 && \
-    update-alternatives --set python3 /usr/bin/python3.8 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1
-
-RUN echo "Default python3 version after alternatives:" && python3 --version
-
-ENV PATH="/root/.local/bin:${PATH}"
-RUN python3.8 -m pip install -U python-dotenv catkin_tools
-
-RUN apt-get update && apt-get install -y \
-    ros-noetic-gazebo-ros \
-    ros-noetic-gazebo-ros-control \
+    python3-rosdep \
+    python3-catkin-tools \
     ros-noetic-gazebo-ros-pkgs \
-    ros-noetic-joint-state-publisher \
+    ros-noetic-gazebo-ros-control \
+    ros-noetic-joint-state-controller \
+    ros-noetic-effort-controllers \
+    ros-noetic-position-controllers \
     ros-noetic-robot-state-publisher \
+    ros-noetic-controller-manager \
+    ros-noetic-xacro \
+    ros-noetic-urdf \
     ros-noetic-rviz \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install Python dependencies
+RUN python3 -m pip install -U pip setuptools wheel
+RUN python3 -m pip install python-dotenv pyinputplus rich langchain numpy netifaces
+
+# Create workspace and clone Interbotix packages
 WORKDIR /root
 RUN mkdir -p interbotix_ws/src
+WORKDIR /root/interbotix_ws/src
+
+# Clone the repositories
+RUN git clone --depth 1 https://github.com/Interbotix/interbotix_ros_core.git && \
+    git clone --depth 1 https://github.com/Interbotix/interbotix_ros_manipulators.git
+
+# Initialize rosdep
 WORKDIR /root/interbotix_ws
-
-RUN echo "BUILD: Current directory: $(pwd)" && \
-    echo "BUILD: Cloning Interbotix repositories into src/ ..." && \
-    git clone https://github.com/Interbotix/interbotix_ros_manipulators.git src/interbotix_ros_manipulators && \
-    echo "BUILD: Listing contents of src/interbotix_ros_manipulators:" && \
-    ls -Al src/interbotix_ros_manipulators/ && \
-    echo "BUILD: Checking for src/interbotix_ros_manipulators/interbotix_xsarm_control:" && \
-    ls -Al src/interbotix_ros_manipulators/interbotix_xsarm_control || echo "BUILD WARN: src/interbotix_ros_manipulators/interbotix_xsarm_control not found after clone!"
-
-RUN git clone https://github.com/Interbotix/interbotix_ros_core.git src/interbotix_ros_core && \
-    echo "BUILD: Listing contents of src/interbotix_ros_core:" && \
-    ls -Al src/interbotix_ros_core/
-
-RUN echo "BUILD: Listing all contents of src/ directory:" && \
-    ls -Al src/
-
-# MODIFIED: Use /bin/bash -c for commands needing 'source'
-RUN echo "BUILD: Running rosdep install..." && \
-    apt-get update && \
-    /bin/bash -c "source /opt/ros/noetic/setup.bash && \
-                  rosdep update && \
-                  rosdep install --from-paths src --ignore-src -r -y --verbose" && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN echo "BUILD: Building interbotix_ws with catkin_make..." && \
-    /bin/bash -c "source /opt/ros/noetic/setup.bash && \
-                  catkin_make -j1 -DCATKIN_ENABLE_TESTING=0 && \
-                  echo 'BUILD: catkin_make finished. Checking for devel/setup.bash...' && \
-                  if [ ! -f devel/setup.bash ]; then \
-                      echo 'BUILD ERROR: Interbotix workspace build FAILED, devel/setup.bash not found.' >&2; \
-                      exit 1; \
-                  fi && \
-                  echo 'BUILD: Interbotix workspace build SUCCEEDED. devel/setup.bash found.' && \
-                  echo 'BUILD: Listing contents of devel/share/ to find interbotix_xsarm_control...' && \
-                  ls -Al devel/share/interbotix_xsarm_control || echo 'BUILD WARN: devel/share/interbotix_xsarm_control not found after build.'"
-
-# Debug interbotix_xsarm_control package
 RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
-    source /root/interbotix_ws/devel/setup.bash && \
-    rospack find interbotix_xsarm_control || echo 'BUILD WARN: interbotix_xsarm_control not found after build'"
+    if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
+        rosdep init; \
+    fi && \
+    rosdep update || true"
 
-RUN python3.8 -m pip install pyinputplus rich langchain && \
-    echo "Verifying pyinputplus for python3.8 DURING BUILD:" && \
-    python3.8 -c "import pyinputplus; print(f'BUILD: pyinputplus for py3.8 found at: {pyinputplus.__file__}')" || \
-    (echo "BUILD ERROR: pyinputplus install or import for Python 3.8 FAILED" && exit 1)
+# Install dependencies
+RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+    rosdep install --from-paths src --ignore-src -r -y || true"
 
+# Build the workspace with catkin_make
+RUN /bin/bash -c "source /opt/ros/noetic/setup.bash && \
+    catkin_make -DCATKIN_ENABLE_TESTING=0"
+
+# Source the workspace in bashrc
 RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
-    echo "if [ -f /root/interbotix_ws/devel/setup.bash ]; then source /root/interbotix_ws/devel/setup.bash; fi" >> /root/.bashrc && \
-    echo "alias start='cd /app && catkin build && source devel/setup.bash && roslaunch arm_agent agent.launch'" >> /root/.bashrc && \
-    echo "export ROSLAUNCH_SSH_UNKNOWN=1" >> /root/.bashrc
+    echo "source /root/interbotix_ws/devel/setup.bash" >> /root/.bashrc
 
+# Copy application files
 COPY . /app/
 WORKDIR /app/
-RUN chmod +x /app/src/arm_agent/scripts/arm_agent.py
-RUN python3.9 -m pip install --user -e .
+RUN chmod +x /app/src/arm_agent/scripts/arm_agent.py || true
 
-# Startup script
+# Install Python dependencies for the app
+RUN python3.8 -m pip install --user PyYAML==6.0.1 \
+    python-dotenv>=1.0.1 \
+    langchain \
+    langchain-community \
+    langchain-core \
+    langchain-groq \
+    pydantic \
+    pyinputplus \
+    cffi \
+    rich \
+    regex \
+    pillow>=10.4.0 \
+    numpy
+
+# Install the rosgpt package
+RUN python3 -m pip install --user -e .
+
+# Create startup script that properly launches the simulation
 RUN echo '#!/bin/bash\n\
+# Source ROS environments\n\
 source /opt/ros/noetic/setup.bash\n\
-PYTHON38_NETIFACES_PATH=$(python3.8 -c "import netifaces; print(netifaces.__file__)" 2>/dev/null || echo "NOT_FOUND")\n\
-echo "Python 3.8 can find netifaces at: $PYTHON38_NETIFACES_PATH"\n\
-ROS_PYTHON_NETIFACES_PATH=$(python3 -c "import netifaces; print(netifaces.__file__)" 2>/dev/null || echo "NOT_FOUND")\n\
-echo "ROS Python environment can find netifaces at: $ROS_PYTHON_NETIFACES_PATH"\n\
-if [ -f /root/interbotix_ws/devel/setup.bash ]; then\n\
-    source /root/interbotix_ws/devel/setup.bash\n\
-    echo "Sourced /root/interbotix_ws/devel/setup.bash"\n\
-else\n\
-    echo "WARNING: /root/interbotix_ws/devel/setup.bash not found."\n\
-fi\n\
+source /root/interbotix_ws/devel/setup.bash\n\
+export PYTHONPATH="/app/src:$PYTHONPATH"\n\
+echo "PYTHONPATH is set to: $PYTHONPATH"\n\
+\n\
+# Start roscore\n\
 roscore > /dev/null 2>&1 &\n\
+ROSCORE_PID=$!\n\
 sleep 5\n\
-if rospack find interbotix_xsarm_control > /dev/null 2>&1; then\n\
-    echo "Found interbotix_xsarm_control package. Launching Interbotix simulation..."\n\
+\n\
+# Launch simulation\n\
+echo "Launching PincherX-100 simulation..."\n\
+echo "Checking available packages..."\n\
+rospack list | grep interbotix || echo "No interbotix packages found in rospack"\n\
+\n\
+# Try to launch the simulation\n\
+if rospack find interbotix_xsarm_gazebo > /dev/null 2>&1; then\n\
+    echo "Found interbotix_xsarm_gazebo package"\n\
     if [ "$HEADLESS" = "false" ]; then\n\
-        roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=px100 use_fake:=true use_sim:=true &\n\
+        roslaunch interbotix_xsarm_gazebo xsarm_gazebo.launch robot_model:=px100 use_position_controllers:=true gui:=true &\n\
     else\n\
-        xvfb-run -a -s \"-screen 0 1920x1080x24\" roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=px100 use_fake:=true use_sim:=true &\n\
+        xvfb-run -a -s "-screen 0 1920x1080x24" roslaunch interbotix_xsarm_gazebo xsarm_gazebo.launch robot_model:=px100 use_position_controllers:=true gui:=false &\n\
+    fi\n\
+elif rospack find interbotix_xsarm_sim > /dev/null 2>&1; then\n\
+    echo "Found interbotix_xsarm_sim package"\n\
+    if [ "$HEADLESS" = "false" ]; then\n\
+        roslaunch interbotix_xsarm_sim xsarm_gazebo.launch robot_model:=px100 use_position_controllers:=true gui:=true &\n\
+    else\n\
+        xvfb-run -a -s "-screen 0 1920x1080x24" roslaunch interbotix_xsarm_sim xsarm_gazebo.launch robot_model:=px100 use_position_controllers:=true gui:=false &\n\
+    fi\n\
+elif rospack find interbotix_xsarm_control > /dev/null 2>&1; then\n\
+    echo "Found interbotix_xsarm_control package"\n\
+    # Check what launch files are available\n\
+    echo "Available launch files in interbotix_xsarm_control:"\n\
+    find $(rospack find interbotix_xsarm_control) -name "*.launch"\n\
+    if [ "$HEADLESS" = "false" ]; then\n\
+        roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=px100 use_sim:=true use_fake:=true gui:=true &\n\
+    else\n\
+        xvfb-run -a -s "-screen 0 1920x1080x24" roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=px100 use_sim:=true use_fake:=true gui:=false &\n\
     fi\n\
 else\n\
-    echo "WARNING: interbotix_xsarm_control package not found by rospack."\n\
+    echo "ERROR: No Interbotix simulation packages found!"\n\
+    echo "Available packages:"\n\
+    rospack list | grep -i arm\n\
 fi\n\
-sleep 8\n\
-echo "Run '\''start'\'' to build and launch the ROSGPT-PincherX-100 demo."\n\
+\n\
+GAZEBO_PID=$!\n\
+\n\
+# Wait for simulation to start\n\
+echo "Waiting for simulation to start..."\n\
+sleep 15\n\
+\n\
+# Check available topics\n\
+echo ""\n\
+echo "Available ROS topics:"\n\
+rostopic list | grep -E "(px100|joint|control|arm)" || echo "No relevant topics found"\n\
+\n\
+echo ""\n\
+echo "Available ROS nodes:"\n\
+rosnode list\n\
+\n\
+echo ""\n\
+echo "============================================="\n\
+echo "PincherX-100 simulation environment is ready!"\n\
+echo "To launch the ROSGPT agent, run:"\n\
+echo "cd /app && catkin build && source devel/setup.bash && roslaunch arm_agent agent.launch"\n\
+echo "============================================="\n\
+echo ""\n\
+\n\
 exec /bin/bash\n' > /start.sh && chmod +x /start.sh
 
 CMD ["/start.sh"]
