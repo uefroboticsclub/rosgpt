@@ -21,7 +21,7 @@ The project consists of several components:
 
 1. Clone this repository:
    ```
-   git clone <repository-url>
+   git clone https://github.com/uefroboticsclub/rosgpt.git
    cd rosgpt
    ```
 
